@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberChallenge Pro</title>
+<style>
+:root{font-family:Arial,Helvetica,sans-serif;color:#eaf2ff;background:#071426}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at top,#12345b,#071426 65%)}
+main{width:min(760px,100%);background:#10233d;border:1px solid #315174;border-radius:22px;padding:clamp(20px,5vw,38px);box-shadow:0 18px 55px #0006}
+.tag{display:inline-block;padding:7px 12px;border-radius:30px;background:#153e65;color:#8ed5ff;font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase}
+h1{font-size:clamp(28px,6vw,42px);margin:16px 0 5px}p.sub{color:#b7c9df;margin-top:0}
+.progress{display:flex;gap:7px;margin:24px 0}.bar{height:7px;flex:1;background:#30445e;border-radius:10px}.bar.active{background:#35a8f5}
+.counter{color:#9eb4ce;font-size:14px;margin-bottom:12px}.question{font-size:clamp(19px,3vw,24px);line-height:1.4;font-weight:700;margin:0 0 20px}
+.option{display:block;width:100%;text-align:left;margin:10px 0;padding:15px 16px;border:1px solid #45617f;border-radius:12px;background:#152d4b;color:#eaf2ff;font-size:16px;cursor:pointer}
+.option:hover:not(:disabled){border-color:#58baff;background:#1a3a60}.option:disabled{cursor:default;opacity:1}
+.option.selected{border-color:#58baff;background:#1d4770}.option.correct{border-color:#39c98a;background:#123f39}.option.wrong{border-color:#ff8c8c;background:#492b39}
+.feedback{margin-top:18px;padding:16px;border-radius:12px;background:#0b1b30;border:1px solid #385574;line-height:1.55}
+button.primary{border:0;border-radius:12px;padding:14px 20px;background:#1688d5;color:white;font-weight:bold;font-size:16px;cursor:pointer;margin-top:18px;width:100%}
+button.primary:disabled{opacity:.4;cursor:not-allowed}.result{text-align:center;padding:18px 0}.score{font-size:56px;font-weight:bold;color:#8ed5ff;margin:14px}
+small{display:block;color:#9eb4ce;margin-top:18px;line-height:1.5}
+</style>
+</head>
+<body>
+<main>
+<div class="tag">Evaluación técnica · Nivel intermedio–avanzado</div>
+<h1>CyberChallenge Pro</h1>
+<p class="sub">Pon a prueba tus conocimientos de ciberseguridad en el desarrollo de software.</p>
+<div id="game">
+  <div class="progress" id="progress"></div>
+  <div class="counter" id="counter"></div>
+  <p class="question" id="question"></p>
+  <div id="options"></div>
+  <div id="feedback" class="feedback" hidden></div>
+  <button class="primary" id="action" disabled>Evaluar respuesta</button>
+</div>
+<small>Recurso educativo de autoevaluación. Las explicaciones ayudan a reforzar conceptos; no sustituyen una revisión técnica especializada.</small>
+</main>
+<script>
+const questions=[
+{q:"Durante una revisión de código, un desarrollador encuentra que una consulta SQL incorpora directamente los datos introducidos por el usuario. ¿Cuál es el riesgo principal?",o:["Una vulnerabilidad de inyección SQL","Un problema de disponibilidad del servidor","Un error de diseño de interfaz"],a:0,e:"La concatenación de entradas no confiables en consultas SQL puede permitir que se altere la consulta. Se recomienda utilizar consultas parametrizadas."},
+{q:"Una aplicación almacena contraseñas de usuarios en texto plano dentro de su base de datos. ¿Qué práctica debería implementarse?",o:["Codificar las contraseñas con Base64","Aplicar funciones de hash diseñadas para contraseñas, con sal individual","Guardar las contraseñas en un archivo separado"],a:1,e:"Las contraseñas deben almacenarse mediante funciones de hash resistentes y específicas para contraseñas, con sal individual; nunca en texto plano."},
+{q:"En una prueba de seguridad se descubre que un usuario puede consultar información de otra cuenta cambiando un identificador en la URL. ¿Qué control está fallando?",o:["Control de acceso y autorización a nivel de recurso","Compresión de datos","Validación del diseño adaptable"],a:0,e:"El servidor debe verificar que cada usuario tenga autorización para acceder al recurso solicitado. Ocultar botones no sustituye esta validación."},
+{q:"Un equipo publica una aplicación sin revisar las dependencias externas. ¿Cuál es una consecuencia posible?",o:["Aumento automático del rendimiento","Uso de componentes con vulnerabilidades conocidas","Eliminación de errores de programación"],a:1,e:"Las bibliotecas y dependencias pueden contener vulnerabilidades. Es necesario inventariarlas, actualizarlas y evaluar sus riesgos."},
+{q:"¿En qué etapa del ciclo de vida del software conviene integrar las prácticas de ciberseguridad?",o:["Únicamente después de publicar el producto","Solo durante las pruebas finales","Desde la planificación y durante todo el ciclo de vida"],a:2,e:"La seguridad debe integrarse desde los requisitos y el diseño hasta el desarrollo, las pruebas, el despliegue y el mantenimiento."}
+];
+let current=0,selected=null,score=0,answered=false;
+const $=id=>document.getElementById(id);
+function handleAction(){
+ if(!answered){
+  if(selected===null)return;
+  answered=true;const q=questions[current];const opts=[...$("options").children];
+  opts.forEach((b,i)=>{b.disabled=true;if(i===q.a)b.classList.add("correct");if(i===selected&&selected!==q.a)b.classList.add("wrong");});
+  if(selected===q.a)score++;
+  $("feedback").hidden=false;
+  $("feedback").innerHTML=(selected===q.a?"<strong>✓ Respuesta correcta.</strong> ":"<strong>Respuesta incorrecta.</strong> ")+"<br><strong>Respuesta correcta:</strong> "+q.o[q.a]+ "<br>"+q.e;
+  $("action").textContent=current===questions.length-1?"Ver resultado":"Siguiente pregunta";
+ }else if(current<questions.length-1){current++;selected=null;answered=false;render();}
+ else{showResult();}
+}
+function render(){
+ $("progress").innerHTML=questions.map((_,i)=>`<div class="bar ${i<=current?"active":""}"></div>`).join("");
+ $("counter").textContent=`Pregunta ${current+1} de ${questions.length}`;
+ $("question").textContent=questions[current].q;
+ $("options").innerHTML="";
+ questions[current].o.forEach((o,i)=>{
+  const b=document.createElement("button");b.className="option";b.textContent=o;b.type="button";
+  b.onclick=()=>{if(answered)return;selected=i;[...$("options").children].forEach(x=>x.classList.remove("selected"));b.classList.add("selected");$("action").disabled=false;};
+  $("options").appendChild(b);
+ });
+ $("feedback").hidden=true;$("feedback").textContent="";
+ $("action").disabled=true;$("action").textContent="Evaluar respuesta";
+}
+$("action").onclick=handleAction;
+function showResult(){
+ $("game").innerHTML=`<div class="result"><div class="tag">Evaluación finalizada</div><div class="score">${score}/5</div><h2>${score===5?"¡Dominio excelente!":score>=3?"¡Buen trabajo!":"Sigue aprendiendo"}</h2><p>${score===5?"Demostraste un gran dominio de los conceptos evaluados.":score>=3?"Repasa las explicaciones para reforzar los conceptos que te resultaron difíciles.":"Vuelve a revisar los conceptos y realiza otra vez la evaluación para mejorar."}</p><button class="primary" id="restart">Repetir evaluación</button></div>`;
+ $("restart").onclick=()=>{current=0;selected=null;score=0;answered=false;$("game").innerHTML='<div class="progress" id="progress"></div><div class="counter" id="counter"></div><p class="question" id="question"></p><div id="options"></div><div id="feedback" class="feedback" hidden></div><button class="primary" id="action" disabled>Evaluar respuesta</button>';render();$("action").onclick=handleAction;};
+}
+render();
+</script>
+</body>
+</html>
